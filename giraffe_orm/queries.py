@@ -1,5 +1,5 @@
 from .connections import query_all, query_one, change_db
-from .fields import Field, Date, _Date
+from .fields import Field, Date, datetime
 
 import typing as t
 
@@ -16,39 +16,11 @@ class Query(t.Generic[T]):
 
     def __init__(self, model: t.Type[T]):
         self.model = model
-        __date_field_cache: Date | None = None
-
-    def create(self, body: dict, required_fields: list[Field]=[]) -> tuple[T | None, dict]:
-        if not body:
-            return None, {"status" : 400, "error" : "No body"}
-
-        invalid_fields: list = []
-
-        for field in required_fields:
-            if not field.name in body:
-                invalid_fields.append(field.name)
-
-            value = body[field.name]
-            valid, error = field.valid(value)
-
-            if not valid:
-                invalid_fields.append(f'{field.name} ({error})')
-
-        if invalid_fields:
-            return None, {"status" : 400, "error" : f"Invalid {', '.join(invalid_fields)}"}
-        
-        fields = ', '.join(body.keys())
-        values = ', '.join(f"'{body[field]}'" for field in body.keys())
-
-        last_id = change_db(f"INSERT INTO {self.model().get_tablename()} ({fields}) VALUES ({values})")
-
-        if not last_id:
-            return None, {"status": 500, "error": "Failed to create record"}
-        
-        new_record = query_one(f"SELECT * FROM {self.model().get_tablename()} WHERE id = {last_id}")
-
-        return self.model.from_db(new_record), {}
+        self.__date_field_cache: Date | None = None
     
+    def create(self) -> T:
+        return self.model()
+
     @t.overload
     def latest(self) -> T | None: ...
     @t.overload
@@ -56,7 +28,7 @@ class Query(t.Generic[T]):
     @t.overload
     def latest(self, date_field: Date) -> T | None: ...
     @t.overload
-    def latest(self, date_field: Field[_Date]) -> T | None: ...
+    def latest(self, date_field: Field[datetime]) -> T | None: ...
     def latest(self, date_field = None) -> T | None:
         """
         Get last table row based on Date fields.
@@ -89,3 +61,6 @@ class Query(t.Generic[T]):
             return self.model.from_db(result)
         
         return None
+    
+    def save(self) -> None:
+        return

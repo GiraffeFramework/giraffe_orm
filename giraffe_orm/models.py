@@ -12,14 +12,10 @@ F = t.TypeVar("F", bound=Field)
 
 class Model:
     query: Query[Self]
-    fields: list[Field]
+    _fields: list[Field] = []
 
-    def __init__(self, body: dict | None = None, **kwargs) -> None:
-        self._body: dict | None = body
+    def __init__(self) -> None:
         self.__tablename__: str = ''
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
     def __init_subclass__(cls: t.Type[T], **kwargs):
         super().__init_subclass__(**kwargs)
@@ -33,6 +29,10 @@ class Model:
             raise ValueError("Table name cannot contain non-alphanumeric characters")
         
         return name
+    
+    @classmethod
+    def add_field(cls, field: Field) -> None:
+        cls._fields.append(field)
 
     def field_exists(self, field: str) -> bool:
         return hasattr(self, field)
@@ -44,8 +44,8 @@ class Model:
         return self._valid_tablename(self.__class__.__name__.lower())
 
     @classmethod
-    def fields_of_type(cls, type: t.Type[F]) -> t.Generator[Field, t.Any, t.Any]:
-        for field in cls.fields:
+    def fields_of_type(cls, type: t.Type[F]) -> t.Generator[F, t.Any, t.Any]:
+        for field in cls._fields:
             if isinstance(field, type):
                 yield field
 

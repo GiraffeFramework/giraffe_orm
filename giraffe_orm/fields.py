@@ -1,4 +1,5 @@
-from datetime import _Date
+from datetime import datetime
+
 
 import typing as t
 
@@ -38,6 +39,8 @@ class Field(t.Generic[T]):
 
         self.max_length = None
         self.min_length = None
+
+        self._original_value: t.Any = None
 
     def get_name(self) -> str:
         return self.name
@@ -83,23 +86,24 @@ class Field(t.Generic[T]):
 
         return schema
     
-    def __set_name__(self, owner: Model, name: str):
+    def __set_name__(self, owner: t.Type['Model'], name: str):
         if not name.isidentifier():
             raise ValueError(f"Invalid field name: {name}")
 
         self.name = name
-        owner.fields.append(self)
+        owner.add_field(self)
 
     @t.overload
-    def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...
+    def __get__(self, instance: None, owner: type['Model']) -> "Field[T]": ...
     @t.overload
-    def __get__(self, instance: t.Any, owner: t.Any) -> T: ...
-    def __get__(self, instance: t.Any, owner: t.Any) -> T | "Field[T]":
+    def __get__(self, instance: t.Self, owner: type['Model']) -> T: ...
+    def __get__(self, instance, owner) -> T | "Field[T]":
         if instance is None:
             return self
         return self.value
 
-    def __set__(self, instance: t.Any, value: str) -> None:
+    def __set__(self, instance: t.Self, value: T) -> None:
+        print("init")
         self.value = value
 
 
@@ -137,7 +141,7 @@ class Float(Field[float]):
             self.default = default
 
 
-class Date(Field[_Date]):
+class Date(Field[datetime]):
     def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None, name: str | None = None) -> None:
         if not default:
             default = "CURRENT_TIMESTAMP"
