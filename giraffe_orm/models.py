@@ -15,7 +15,7 @@ class Model:
     _fields: list[Field] = []
 
     def __init__(self) -> None:
-        self.__tablename__: str = ''
+        self._tablename: str | None = None
 
     def __init_subclass__(cls: t.Type[T], **kwargs):
         super().__init_subclass__(**kwargs)
@@ -24,8 +24,8 @@ class Model:
     def _valid_tablename(self, name: str) -> str:
         if len(name) > 128:
             raise ValueError("Table name cannot be longer than 128 characters")
-        
-        if not name.replace('_', '').isalnum():
+
+        if not name.replace("_", "").isalnum():
             raise ValueError("Table name cannot contain non-alphanumeric characters")
         
         return name
@@ -38,10 +38,16 @@ class Model:
         return hasattr(self, field)
     
     def get_tablename(self) -> str:
-        if self.field_exists('__tablename__') and self.__tablename__:
-            return self._valid_tablename(self.__tablename__)
+        if self._tablename:
+            return self._tablename
+
+        if hasattr(self, "__tablename__"):
+            self._tablename = self._valid_tablename(getattr(self, "__tablename__"))
+
+        else:
+            self._tablename = self.__class__.__name__.lower() + "s"
         
-        return self._valid_tablename(self.__class__.__name__.lower())
+        return self._tablename
 
     @classmethod
     def fields_of_type(cls, type: t.Type[F]) -> t.Generator[F, t.Any, t.Any]:

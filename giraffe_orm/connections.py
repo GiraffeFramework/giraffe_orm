@@ -5,13 +5,13 @@ conn = sqlite3.connect('db.sqlite3')
 cursor = conn.cursor()
 
 
-def change_db(action: str) -> int:
-    print('change_query: ', action)
+def change_db(query: str, parameters: tuple) -> int:
+    print('change_query: ', query)
 
-    cursor.execute(action)
+    cursor.execute(query, parameters)
     conn.commit()
     
-    if action.lower().startswith("insert"):
+    if query.lower().startswith("insert"):
         last_row_id = cursor.lastrowid
 
         return last_row_id if last_row_id else 0
@@ -30,10 +30,15 @@ def query_all(query: str) -> list[tuple]:
     return rows
 
 
-def query_one(query: str) -> tuple:
+def query_one(query: str, parameters: tuple | None = None) -> tuple:
     print('one_query: ', query)
 
-    cursor.execute(query)
+    if parameters:
+        cursor.execute(query, parameters)
+
+    else:
+        cursor.execute(query)
+    
     row = cursor.fetchone()
 
     print('one_query_result: ', row)

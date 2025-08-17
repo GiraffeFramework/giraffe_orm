@@ -86,7 +86,7 @@ class Field(t.Generic[T]):
 
         return schema
     
-    def __set_name__(self, owner: t.Type['Model'], name: str):
+    def __set_name__(self, owner: t.Type["Model"], name: str):
         if not name.isidentifier():
             raise ValueError(f"Invalid field name: {name}")
 
@@ -94,16 +94,15 @@ class Field(t.Generic[T]):
         owner.add_field(self)
 
     @t.overload
-    def __get__(self, instance: None, owner: type['Model']) -> "Field[T]": ...
+    def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...
     @t.overload
-    def __get__(self, instance: t.Self, owner: type['Model']) -> T: ...
-    def __get__(self, instance, owner) -> T | "Field[T]":
+    def __get__(self, instance: t.Any, owner: t.Any) -> T: ...
+    def __get__(self, instance: t.Any, owner: t.Any) -> T | "Field[T]":
         if instance is None:
             return self
         return self.value
 
-    def __set__(self, instance: t.Self, value: T) -> None:
-        print("init")
+    def __set__(self, instance: t.Any, value: str) -> None:
         self.value = value
 
 

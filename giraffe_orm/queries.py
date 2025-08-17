@@ -18,8 +18,21 @@ class Query(t.Generic[T]):
         self.model = model
         self.__date_field_cache: Date | None = None
     
-    def create(self) -> T:
-        return self.model()
+    def create(self, *_, **kwargs) -> T:
+        fields = ', '.join(kwargs.keys())
+        placeholders = ', '.join('?' for _ in kwargs)
+        values = tuple(kwargs.values())
+
+        last_id = change_db(
+            f"INSERT INTO {self.model().get_tablename()} ({fields}) VALUES ({placeholders})",
+            values
+        )
+
+        if not last_id:
+            raise ValueError("Failed to create new entry")
+
+        row = query_one(f"SELECT * FROM {self.model().get_tablename()} WHERE id = ?", (last_id,))
+        return self.model.from_db(row)
 
     @t.overload
     def latest(self) -> T | None: ...
