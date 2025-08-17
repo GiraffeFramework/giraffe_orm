@@ -58,6 +58,9 @@ class Query(t.Generic[T]):
     @t.overload
     def latest(self, date_field: Field[_Date]) -> T | None: ...
     def latest(self, date_field = None) -> T | None:
+        """
+        Get last table row based on Date fields.
+        """
 
         if isinstance(date_field, str):
             self.__date_field_cache = getattr(self, date_field, None)
@@ -70,8 +73,11 @@ class Query(t.Generic[T]):
 
         if not self.__date_field_cache:
             if not date_field:
-                raise ValueError(f"{self.model.get_tablename()}")
+                raise ValueError(f"{self.model().get_tablename()} does not have any date fields.")
+            
             raise ValueError(f"Invalid Date Field '{date_field}' provided for latest() query.")
+        
+        field_name = self.__date_field_cache.get_name()
 
         if not self.model().field_exists(field_name):
             raise ValueError(f"Cannot return by date field {field_name}")

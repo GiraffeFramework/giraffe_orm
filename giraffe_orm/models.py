@@ -144,7 +144,7 @@ class Model:
         return {"tablename" : cls().get_tablename(), "create" : schemas, "alter" : [],}
     
     @classmethod
-    def from_db(cls, row: tuple) -> T:
+    def from_db(cls, row: tuple) -> Self:
         field_names = cls._get_column_names()
         field_values = dict(zip(field_names, row))
         return cls(**field_values)

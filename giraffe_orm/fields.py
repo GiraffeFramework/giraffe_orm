@@ -1,32 +1,34 @@
 from datetime import _Date
-from typing import Any, Optional, Tuple, Type, Generic, TypeVar, Union, overload, TYPE_CHECKING
 
-if TYPE_CHECKING:
+import typing as t
+
+
+if t.TYPE_CHECKING:
     from .models import Model
 
 
-def _is_valid(value: Any, expected_type: Type, name: str) -> bool:
+def _is_valid(value: t.Any, expected_type: t.Type, name: str) -> bool:
     if value is not None and not isinstance(value, expected_type):
         raise TypeError(f"Invalid value for {name}, expected {expected_type.__name__}")
     
     return True
 
 
-T = TypeVar('T')
+T = t.TypeVar('T')
 
 
-class Field(Generic[T]):
+class Field(t.Generic[T]):
     def __init__(
             self, 
             type: str, 
             nullable: bool = True, 
             primary_key: bool = False, 
             unique: bool = False, 
-            default: Optional[Any]=None,
-            name: Optional[str]=None
+            default: t.Any | None = None,
+            name: str | None = None
         ) -> None:
         
-        self.value: Any = None
+        self.value: t.Any = None
         self.name: str = name if name else "unset"
         self.type = type
         self.nullable = nullable
@@ -40,7 +42,7 @@ class Field(Generic[T]):
     def get_name(self) -> str:
         return self.name
 
-    def valid(self, value: str) -> Tuple[bool, str]:
+    def valid(self, value: str) -> tuple[bool, str]:
         if self.max_length and len(value) > self.max_length:
             return False, "Maximum length exceeded"
                 
@@ -58,7 +60,7 @@ class Field(Generic[T]):
             "pk": self.primary_key,
         }
     
-    def get_schema_changes(self, old_schema: tuple) -> Optional[dict]:
+    def get_schema_changes(self, old_schema: tuple) -> dict | None:
         schema = {}
 
         if self.type != old_schema[2]:
@@ -88,21 +90,21 @@ class Field(Generic[T]):
         self.name = name
         owner.fields.append(self)
 
-    @overload
-    def __get__(self, instance: None, owner: Any) -> "Field[T]": ...
-    @overload
-    def __get__(self, instance: Any, owner: Any) -> T: ...
-    def __get__(self, instance: Any, owner: Any) -> Union[T, "Field[T]"]:
+    @t.overload
+    def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...
+    @t.overload
+    def __get__(self, instance: t.Any, owner: t.Any) -> T: ...
+    def __get__(self, instance: t.Any, owner: t.Any) -> T | "Field[T]":
         if instance is None:
             return self
         return self.value
 
-    def __set__(self, instance: Any, value: str) -> None:
+    def __set__(self, instance: t.Any, value: str) -> None:
         self.value = value
 
 
 class String(Field[str]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: Optional[str] = None, name: Optional[str] = None, max_length: Optional[int] = 255, min_length: Optional[int] = 0) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: str | None = None, name: str | None = None, max_length: int | None = 255, min_length: int | None = 0) -> None:
         super().__init__("VARCHAR", nullable, primary_key, unique)
 
         if max_length is not None and _is_valid(max_length, int, "max_length"):
@@ -120,7 +122,7 @@ class String(Field[str]):
 
 
 class Integer(Field[int]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: Optional[int] = None, name: Optional[str] = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: int | None = None, name: str | None = None) -> None:
         super().__init__('INTEGER', nullable, primary_key, unique)
 
         if default is not None and _is_valid(default, int, "default"):
@@ -128,7 +130,7 @@ class Integer(Field[int]):
 
 
 class Float(Field[float]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: Optional[float] = None, name: Optional[str] = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: float | None = None, name: str | None = None) -> None:
         super().__init__('FLOAT', nullable, primary_key, unique)
 
         if default is not None and _is_valid(default, float, "default"):
@@ -136,7 +138,7 @@ class Float(Field[float]):
 
 
 class Date(Field[_Date]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: Optional[Any]=None, name: Optional[str] = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None, name: str | None = None) -> None:
         if not default:
             default = "CURRENT_TIMESTAMP"
         
