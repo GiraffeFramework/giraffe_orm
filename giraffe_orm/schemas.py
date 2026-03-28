@@ -24,5 +24,5 @@ class FieldSchema(RawFieldSchema):
 
 class Schema(t.TypedDict):
     tablename: str
-    create: list[RawFieldSchema]
+    create: list[FieldSchema]
     alter: list[RawFieldSchema]

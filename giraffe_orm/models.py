@@ -1,6 +1,6 @@
 from giraffe_orm.connections import query_all
 from giraffe_orm.queries import Query
-from giraffe_orm.schemas import table_pragma, Schema, RawFieldSchema, RenameFieldSchema
+from giraffe_orm.schemas import table_pragma, Schema, RawFieldSchema, RenameFieldSchema, FieldSchema
 from giraffe_orm.fields import Field
 
 from typing_extensions import Self
@@ -12,6 +12,8 @@ F = t.TypeVar("F", bound=Field[t.Any])
 
 
 def _get_rename_field_schema(name: str, old_name: str) -> RenameFieldSchema:
+    """Helper function to return a type corrected RenameFieldSchema"""
+
     return {
         "mode": "rename",
         "name": name,
@@ -21,6 +23,8 @@ def _get_rename_field_schema(name: str, old_name: str) -> RenameFieldSchema:
 
 class Model:
     query: Query[Self]
+
+
     __fields: list[Field[t.Any]] = []
     __registry: list[t.Type["Model"]] = []
 
@@ -97,7 +101,6 @@ class Model:
         
         __dropped_fields: dict[RawFieldSchema, table_pragma] = {}
         altered_fields: list[RawFieldSchema] = []
-        created_fields: list[RawFieldSchema] = []
         old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls()._get_tablename()})")
         schema_keys: list[str] = []
 
@@ -147,12 +150,13 @@ class Model:
                 schema = _get_rename_field_schema(key, old_schema[1])
 
                 altered_fields.remove(raw_field)
+                altered_fields.append(schema)
+                continue
 
-            if not schema:
-                schema = value._get_schema(key)
-                schema["mode"] = 'add'
+            schema = value._get_schema(key)
+            schema["mode"] = 'add'
 
-            created_fields.append(schema)
+            altered_fields.append(schema)
 
 
         if not altered_fields: return None
@@ -161,7 +165,7 @@ class Model:
 
         return {
             "tablename": cls()._get_tablename(),
-            "create": created_fields,
+            "create": [],
             "alter": altered_fields
         }
     
@@ -173,7 +177,7 @@ class Model:
         and all its fields.
         """
         primary_key: bool = False
-        fields: list[RawFieldSchema] = []
+        fields: list[FieldSchema] = []
 
         for key, value in cls.__dict__.items():
             if not isinstance(value, Field): continue

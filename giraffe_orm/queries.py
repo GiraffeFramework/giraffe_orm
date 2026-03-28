@@ -18,7 +18,8 @@ class Query(t.Generic[T]):
         self.model = model
         self.__date_field_cache: Date | None = None
     
-    def create(self, *_, **kwargs) -> T:
+    # TODO: FIX
+    def create(self, **kwargs: dict[str, t.Any]) -> T:
         fields = ', '.join(kwargs.keys())
         placeholders = ', '.join('?' for _ in kwargs)
         values = tuple(kwargs.values())
@@ -43,7 +44,7 @@ class Query(t.Generic[T]):
     def latest(self, date_field: Date) -> T | None: ...
     @t.overload
     def latest(self, date_field: Field[datetime]) -> T | None: ...
-    def latest(self, date_field = None) -> T | None:
+    def latest(self, date_field: str | Date | Field[datetime] | None = None) -> T | None:
         """
         Get last table row based on Date fields.
         """
@@ -77,7 +78,4 @@ class Query(t.Generic[T]):
         return None
     
     def save(self) -> None:
-        return
-
-    def using(self) -> "Query":
         return

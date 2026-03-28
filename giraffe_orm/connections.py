@@ -30,7 +30,7 @@ def query_all(query: str) -> list[tuple[t.Any, ...]]:
     return rows
 
 
-def query_one(query: str, parameters: tuple | None = None) -> tuple:
+def query_one(query: str, parameters: tuple[t.Any, ...] | None = None) -> tuple[t.Any, ...]:
     print('one_query: ', query)
 
     if parameters:
