@@ -3,7 +3,6 @@ from pathlib import Path
 from ..connections import execute_script
 from ..defaults import Migration
 
-import typing as t
 import argparse
 import json
 
@@ -72,7 +71,7 @@ def _get_alter_statements(tablename: str, alterations: list[dict]) -> str:
             alter_statements += f"ALTER TABLE {tablename} ADD COLUMN {_get_field(alter)};"
 
         elif alter['mode'] == 'rename':
-            alter_statements += f"ALTER TABLE {tablename} RENAME COLUMN {alter['old_name']} TO {alter['new_name']};"
+            alter_statements += f"ALTER TABLE {tablename} RENAME COLUMN {alter['old_name']} TO {alter['name']};"
 
     return alter_statements
 

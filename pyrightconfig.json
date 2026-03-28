@@ -1,0 +1,9 @@
+{
+    "typeCheckingMode": "strict",
+    "reportMissingImports": true,
+    "reportUnusedVariable": true,
+    "reportPrivateUsage": "none",
+    "include": [
+        "giraffe_orm"
+    ]
+}

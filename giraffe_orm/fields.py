@@ -1,5 +1,6 @@
-from datetime import datetime
+from giraffe_orm.schemas import table_pragma, FieldSchema
 
+from datetime import datetime
 
 import typing as t
 
@@ -8,7 +9,7 @@ if t.TYPE_CHECKING:
     from .models import Model
 
 
-def _is_valid(value: t.Any, expected_type: t.Type, name: str) -> bool:
+def _is_valid(value: t.Any, expected_type: type, name: str) -> bool:
     if value is not None and not isinstance(value, expected_type):
         raise TypeError(f"Invalid value for {name}, expected {expected_type.__name__}")
     
@@ -54,44 +55,45 @@ class Field(t.Generic[T]):
         
         return True, ""
     
-    def get_schema(self, name: str) -> dict:
+    def _get_schema(self, name: str) -> FieldSchema:
         return {
             "name" : name,
+            "mode": "UNSET",
             "type": self.type,
             "notnull": not self.nullable,
             "dflt_value": self.default,
             "pk": self.primary_key,
         }
     
-    def get_schema_changes(self, old_schema: tuple) -> dict | None:
-        schema = {}
+    def _get_schema_changes(self, old_schema: table_pragma) -> FieldSchema | None:
+        print("[FIELD OLD SCHEMA]: ", old_schema)
+        changes: dict[str, t.Any] = {}
 
         if self.type != old_schema[2]:
-            schema["type"] = self.type
+            changes["type"] = self.type
 
         if self.nullable == old_schema[3]:
-            schema["notnull"] = not self.nullable
+            changes["notnull"] = not self.nullable
 
         if self.default != old_schema[4]:
-            schema["dflt_value"] = self.default
+            changes["dflt_value"] = self.default
 
         if self.primary_key != old_schema[5]:
-            schema["pk"] = self.primary_key
+            changes["pk"] = self.primary_key
 
-        if not schema:
-            return None
+        if not changes: return None
         
-        schema["name"] = old_schema[1]
-        schema["mode"] = "alter"
+        changes["name"] = old_schema[1]
+        changes["mode"] = "alter"
 
-        return schema
+        return FieldSchema(**changes)
     
     def __set_name__(self, owner: t.Type["Model"], name: str):
         if not name.isidentifier():
             raise ValueError(f"Invalid field name: {name}")
 
         self.name = name
-        owner.add_field(self)
+        owner._add_field(self)
 
     @t.overload
     def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...

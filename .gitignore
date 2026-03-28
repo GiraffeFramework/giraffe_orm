@@ -15,4 +15,6 @@ build/
 
 *.code-workspace
 
-db.sqlite3
+# Databases
+migrations/
+*.sqlite3
