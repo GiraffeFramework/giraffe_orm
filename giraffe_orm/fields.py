@@ -30,7 +30,6 @@ class Field(t.Generic[T]):
             name: str | None = None
         ) -> None:
         
-        self.value: t.Any = None
         self.name: str = name if name else "unset"
         self.type = type
         self.nullable = nullable
@@ -40,8 +39,6 @@ class Field(t.Generic[T]):
 
         self.max_length = None
         self.min_length = None
-
-        self._original_value: t.Any = None
 
     def get_name(self) -> str:
         return self.name
@@ -87,25 +84,18 @@ class Field(t.Generic[T]):
         changes["mode"] = "alter"
 
         return FieldSchema(**changes)
-    
-    def __set_name__(self, owner: t.Type["Model"], name: str):
-        if not name.isidentifier():
-            raise ValueError(f"Invalid field name: {name}")
-
-        self.name = name
-        owner._add_field(self)
 
     @t.overload
     def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...
     @t.overload
-    def __get__(self, instance: t.Any, owner: t.Any) -> T: ...
-    def __get__(self, instance: t.Any, owner: t.Any) -> T | "Field[T]":
-        if instance is None:
-            return self
-        return self.value
+    def __get__(self, instance: 'Model', owner: t.Any) -> T: ...
+    def __get__(self, instance: 'Model | None', owner: t.Any) -> T | "Field[T]":
+        if instance is None: return self
+        
+        return t.cast(T, instance._data.get(self.name, self.default))
 
-    def __set__(self, instance: t.Any, value: str) -> None:
-        self.value = value
+    def __set__(self, instance: 'Model', value: str) -> None:
+        instance._data[self.name] = value
 
 
 class String(Field[str]):

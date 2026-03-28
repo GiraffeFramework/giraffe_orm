@@ -1,4 +1,4 @@
-from giraffe_orm.connections import query_all
+from giraffe_orm.connections import query_all, change_db
 from giraffe_orm.queries import Query
 from giraffe_orm.schemas import table_pragma, Schema, RawFieldSchema, RenameFieldSchema, FieldSchema
 from giraffe_orm.fields import Field
@@ -25,22 +25,46 @@ class Model:
     query: Query[Self]
 
 
-    __fields: list[Field[t.Any]] = []
-    __registry: list[t.Type["Model"]] = []
+    _data: dict[str, t.Any] = {}
+    _original_data: dict[str, t.Any] = {}
+    
+    _fields: list[Field[t.Any]] = []
+    _primary_key: Field[t.Any]
 
 
-    def __init__(self) -> None:
+    def __init__(self, **kwargs: dict[str, t.Any]) -> None:
         self._tablename: str | None = None
+        self._original_data = kwargs
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
     def __init_subclass__(cls: t.Type[T], **kwargs: dict[str, t.Any]):
         super().__init_subclass__(**kwargs)
         cls.query = Query(cls)
 
-        # There is no need to discover the internal table as it is 
-        # automatically added during migrations anyway.
-        if cls()._get_tablename() == "__migrations__": return
-        cls.__registry.append(cls)
+        # Initialize class specific storage
+        cls._fields = []
+        found_pk: Field[t.Any] | None = None
+
+        # Loop over all key, values of this Model instance (ignore all that 
+        # arent Fields). Store all Fields and the primary_key
+        for name, value in cls.__dict__.items():
+            if not isinstance(value, Field): continue
+            if not name.isidentifier(): raise ValueError(f"Invalid field name {name}")
+            
+            value.name = name
+            cls._fields.append(value)   # type: ignore
+
+            if not value.primary_key: continue
+            if found_pk != None:
+                raise TypeError(f"You cannot have multiple primary keys")
+            
+            found_pk = value     # type: ignore
+
+        if not found_pk: raise ValueError("No primary key defined for Model")
+        cls._primary_key = found_pk     # type: ignore
 
 
     def _valid_tablename(self, name: str) -> str:
@@ -51,15 +75,6 @@ class Model:
             raise ValueError("Table name cannot contain non-alphanumeric characters")
         
         return name
-    
-
-    @classmethod
-    def _add_field(cls, field: Field[t.Any]) -> None:
-        cls.__fields.append(field)
-
-
-    def _field_exists(self, field: str) -> bool:
-        return hasattr(self, field)
     
 
     def _get_tablename(self) -> str:
@@ -76,7 +91,7 @@ class Model:
 
     @classmethod
     def _fields_of_type(cls, type: t.Type[F]) -> t.Generator[F, t.Any, t.Any]:
-        for field in cls.__fields:
+        for field in cls._fields:
             if isinstance(field, type):
                 yield field
 
@@ -202,9 +217,36 @@ class Model:
     def _from_db(cls, row: tuple[t.Any, ...]) -> Self:
         field_names = cls._get_column_names()
         field_values = dict(zip(field_names, row))
-        return cls(**field_values)
-    
 
-    @classmethod
-    def _get_registry(cls) -> list[t.Type["Model"]]:
-        return cls.__registry
+        return cls(**field_values)
+
+
+    def save(self) -> None:
+        changed_fields: list[str] = []
+        changed_values: list[t.Any] = []
+
+        # Loop over all the fields of this Model and check whether their values
+        # changed. If so store the field names and the new values
+        for field in self._fields:
+            value = self._data[field.get_name()]
+            if self._original_data[field.get_name()] == value: continue
+
+            changed_fields.append(field.get_name())
+            changed_values.append(value)
+
+        if not changed_fields: return
+
+        pk_name = type(self)._primary_key.get_name()
+        query = \
+        f"""
+        UPDATE {self._get_tablename()} 
+        SET {" = ?, ".join(changed_fields)} = ? 
+        WHERE {pk_name} = ?
+        """
+
+        # As final parameter, we add the identifier for this modal (whatever 
+        # its value is for the primary key field)
+        changed_values.append(self._original_data[pk_name])
+        change_db(query, tuple(changed_values))
+
+        return
