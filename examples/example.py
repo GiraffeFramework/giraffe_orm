@@ -27,11 +27,16 @@ else:
     # Giraffe.query.create(primary_key="test")
 
 
-giraffe_2 = Giraffe.query.with_fields(Giraffe.primary_key).latest("date")
+giraffe_2 = Giraffe.query.with_fields(Giraffe.primary_key.label("new_label")).latest("date")
 
 if giraffe_2:
-    # Cannot fix type hints here without a Mypy or Pyright plugin
+    # Cannot fix type hints here without a Mypy or Pyright plugin (for more than 1 field)
     print(giraffe_2[0].capitalize())
+
+giraffe_3 = Giraffe.query.load_fields(Giraffe.primary_key).latest("date")
+
+if giraffe_3:
+    print(giraffe_3.primary_key.capitalize())
 
 
 print(Migration.query.latest())

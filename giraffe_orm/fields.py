@@ -40,17 +40,7 @@ class Field(t.Generic[T]):
         self.max_length = None
         self.min_length = None
 
-    def get_name(self) -> str:
-        return self.name
-
-    def valid(self, value: str) -> tuple[bool, str]:
-        if self.max_length and len(value) > self.max_length:
-            return False, "Maximum length exceeded"
-                
-        if self.min_length and len(value) < self.min_length:
-            return False, "Minimum length not reached"
-        
-        return True, ""
+        self.__label: str | None = None
     
     def _get_schema(self) -> FieldSchema:
         return {
@@ -84,6 +74,26 @@ class Field(t.Generic[T]):
         changes["mode"] = "alter"
 
         return FieldSchema(**changes)
+    
+    def _select(self) -> str:
+        if not self.__label: return self.name
+        return self.name + " AS " + self.__label
+    
+    def get_name(self) -> str:
+        return self.name
+    
+    def label(self, label: str) -> t.Self:
+        self.__label = label
+        return self
+
+    def valid(self, value: str) -> tuple[bool, str]:
+        if self.max_length and len(value) > self.max_length:
+            return False, "Maximum length exceeded"
+                
+        if self.min_length and len(value) < self.min_length:
+            return False, "Minimum length not reached"
+        
+        return True, ""
 
     @t.overload
     def __get__(self, instance: None, owner: t.Any) -> "Field[T]": ...

@@ -35,11 +35,15 @@ class Query(t.Generic[MT, RT]):
 
 
     def _build_select(self) -> str:
+        """
+        Generates a stringified format of what should be in the SELECT 
+        statement of the database query.
+        """
         if not self.__selected_fields: return "*"
         select = ""
 
         for field in self.__selected_fields:
-            select += field.get_name() + ", "
+            select += field._select() + ", "
         
         return select[:-2]
     
