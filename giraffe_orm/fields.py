@@ -52,9 +52,9 @@ class Field(t.Generic[T]):
         
         return True, ""
     
-    def _get_schema(self, name: str) -> FieldSchema:
+    def _get_schema(self) -> FieldSchema:
         return {
-            "name" : name,
+            "name" : self.name,
             "mode": "UNSET",
             "type": self.type,
             "notnull": not self.nullable,
@@ -63,7 +63,7 @@ class Field(t.Generic[T]):
         }
     
     def _get_schema_changes(self, old_schema: table_pragma) -> FieldSchema | None:
-        print("[FIELD OLD SCHEMA]: ", old_schema)
+        print("\t[FIELD OLD SCHEMA]: ", old_schema)
         changes: dict[str, t.Any] = {}
 
         if self.type != old_schema[2]:

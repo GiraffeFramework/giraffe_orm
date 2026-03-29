@@ -24,11 +24,14 @@ if giraffe:
 
 else:
     print("???")
-    Giraffe.query.create(primary_key="test")
+    # Giraffe.query.create(primary_key="test")
 
 
-giraffe_2 = Giraffe.query.latest("date")
-print(giraffe_2)
+giraffe_2 = Giraffe.query.with_fields(Giraffe.primary_key).latest("date")
+
+if giraffe_2:
+    # Cannot fix type hints here without a Mypy or Pyright plugin
+    print(giraffe_2[0].capitalize())
 
 
 print(Migration.query.latest())

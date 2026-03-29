@@ -24,8 +24,6 @@ def execute(_: None):
     # Add migration table for initial migrations
     if not version:
         migration_name = "0.json"
-        
-        models.append(Migration)
 
     else:
         migration_name = f"{int(version.name.split('.')[0]) + 1}.json"
@@ -73,7 +71,7 @@ def _get_models() -> list[t.Type[Model]]:
     for module_path in config["models"]:
         importlib.import_module(module_path)
 
-    models = Model._get_registry()
+    models = Model._registry
     print(models)
     return models
 

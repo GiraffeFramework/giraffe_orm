@@ -22,7 +22,7 @@ def _get_rename_field_schema(name: str, old_name: str) -> RenameFieldSchema:
 
 
 class Model:
-    query: Query[Self]
+    query: Query[Self, Self]
 
 
     _data: dict[str, t.Any] = {}
@@ -31,22 +31,28 @@ class Model:
     _fields: list[Field[t.Any]] = []
     _primary_key: Field[t.Any]
 
+    _tablename: str | None = None
+    _registry: list[t.Type['Model']] = []
+
 
     def __init__(self, **kwargs: dict[str, t.Any]) -> None:
-        self._tablename: str | None = None
         self._original_data = kwargs
         
         for key, value in kwargs.items():
             setattr(self, key, value)
 
 
-    def __init_subclass__(cls: t.Type[T], **kwargs: dict[str, t.Any]):
+    def __init_subclass__(cls: t.Type[T], is_abstract: bool = False, **kwargs: dict[str, t.Any]):
         super().__init_subclass__(**kwargs)
         cls.query = Query(cls)
 
         # Initialize class specific storage
         cls._fields = []
         found_pk: Field[t.Any] | None = None
+
+        # Any non-abstract class should be taken up into the registry.
+        if not is_abstract:
+            Model._registry.append(cls)
 
         # Loop over all key, values of this Model instance (ignore all that 
         # arent Fields). Store all Fields and the primary_key
@@ -67,7 +73,8 @@ class Model:
         cls._primary_key = found_pk     # type: ignore
 
 
-    def _valid_tablename(self, name: str) -> str:
+    @classmethod
+    def _valid_tablename(cls, name: str) -> str:
         if len(name) > 128:
             raise ValueError("Table name cannot be longer than 128 characters")
 
@@ -76,18 +83,18 @@ class Model:
         
         return name
     
-
-    def _get_tablename(self) -> str:
-        if self._tablename:
-            return self._tablename
-
-        if hasattr(self, "__tablename__"):
-            self._tablename = self._valid_tablename(getattr(self, "__tablename__"))
-
-        else:
-            self._tablename = self.__class__.__name__.lower() + "s"
+    @classmethod
+    def _cls_tablename(cls) -> str:
+        if cls._tablename:
+            return cls._tablename
         
-        return self._tablename
+        if hasattr(cls, "__tablename__"):
+            cls._tablename = cls._valid_tablename(getattr(cls, "__tablename__"))
+        
+        else:
+            cls._tablename = cls.__name__.lower() + "s"
+        
+        return cls._tablename
 
     @classmethod
     def _fields_of_type(cls, type: t.Type[F]) -> t.Generator[F, t.Any, t.Any]:
@@ -116,10 +123,10 @@ class Model:
         
         __dropped_fields: dict[RawFieldSchema, table_pragma] = {}
         altered_fields: list[RawFieldSchema] = []
-        old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls()._get_tablename()})")
+        old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls._cls_tablename()})")
         schema_keys: list[str] = []
 
-        print('old_schemas: ', old_schemas)
+        print('\told_schemas: ', old_schemas)
         
         # If not previous schema exists, we may just return the current schema
         if not old_schemas: return cls._get_schema()
@@ -168,18 +175,18 @@ class Model:
                 altered_fields.append(schema)
                 continue
 
-            schema = value._get_schema(key)
+            schema = value._get_schema()
             schema["mode"] = 'add'
 
             altered_fields.append(schema)
 
 
         if not altered_fields: return None
-        print('schemas: ', altered_fields)
+        print('\tschemas: ', altered_fields)
 
 
         return {
-            "tablename": cls()._get_tablename(),
+            "tablename": cls._cls_tablename(),
             "create": [],
             "alter": altered_fields
         }
@@ -194,20 +201,18 @@ class Model:
         primary_key: bool = False
         fields: list[FieldSchema] = []
 
-        for key, value in cls.__dict__.items():
-            if not isinstance(value, Field): continue
-
-            if value.primary_key:
+        for field in cls._fields:
+            if field.primary_key:
                 if primary_key: raise ValueError("Model can only have one primary key")
 
                 primary_key = True
 
-            fields.append(value._get_schema(key))
+            fields.append(field._get_schema())
 
         if not primary_key: raise ValueError("Model must have a primary key")
 
         return {
-            "tablename": cls()._get_tablename(),
+            "tablename": cls()._cls_tablename(),
             "create": fields,
             "alter": []
         }
@@ -239,7 +244,7 @@ class Model:
         pk_name = type(self)._primary_key.get_name()
         query = \
         f"""
-        UPDATE {self._get_tablename()} 
+        UPDATE {self._cls_tablename()} 
         SET {" = ?, ".join(changed_fields)} = ? 
         WHERE {pk_name} = ?
         """

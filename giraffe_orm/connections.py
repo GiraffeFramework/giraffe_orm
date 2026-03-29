@@ -6,7 +6,7 @@ cursor = conn.cursor()
 
 
 def change_db(query: str, parameters: tuple[t.Any, ...]) -> int:
-    print('change_query: ', query)
+    print('\tchange_query: ', query)
 
     cursor.execute(query, parameters)
     conn.commit()
@@ -20,18 +20,18 @@ def change_db(query: str, parameters: tuple[t.Any, ...]) -> int:
 
 
 def query_all(query: str) -> list[tuple[t.Any, ...]]:
-    print('all_query: ', query)
+    print('\tall_query: ', query)
 
     cursor.execute(query)
     rows = cursor.fetchall()
 
-    print('all_query_result: ', rows)
+    print('\tall_query_result: ', rows)
 
     return rows
 
 
 def query_one(query: str, parameters: tuple[t.Any, ...] | None = None) -> tuple[t.Any, ...]:
-    print('one_query: ', query)
+    print('\tone_query: ', query)
 
     if parameters:
         cursor.execute(query, parameters)
@@ -41,7 +41,7 @@ def query_one(query: str, parameters: tuple[t.Any, ...] | None = None) -> tuple[
     
     row = cursor.fetchone()
 
-    print('one_query_result: ', row)
+    print('\tone_query_result: ', row)
 
     return row
 
@@ -52,7 +52,7 @@ def get_column_names(query: str) -> list[str]:
 
 
 def execute_script(script: str) -> None:
-    print('script', script)
+    print('\tscript', script)
 
     cursor.executescript(script)
     conn.commit()
