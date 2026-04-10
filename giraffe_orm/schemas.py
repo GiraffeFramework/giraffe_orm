@@ -1,6 +1,7 @@
 import typing as t
 
 
+#                    0     1      2      3         4            5
 #                    cid,  name,  type,  notnull,  dflt_value,  pk
 table_pragma = tuple[int,  str,   str,   int,      t.Any,       int]
 

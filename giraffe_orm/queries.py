@@ -40,13 +40,24 @@ class Query(t.Generic[MT, RT]):
         Generates a stringified format of what should be in the SELECT 
         statement of the database query.
         """
-        if not self.__selected_fields: return "*"
+        if not self.__selected_fields: 
+            return ", ".join(self.model._get_column_names())
+        
         select = ""
-
         for field in self.__selected_fields:
             select += field._select() + ", "
         
+        # Remove the trailing ", " which is unused at the end
         return select[:-2]
+    
+
+    def _build_where(self) -> str:
+        """
+        Generates a stringified format of what should be in the WHERE part of
+        the database query.
+        """
+
+        return ""
     
 
     def _query_one(self, query: str) -> RT | None:
@@ -228,3 +239,20 @@ class Query(t.Generic[MT, RT]):
         """
 
         return self._query_one(query)
+
+
+    def update(self, fields: dict[Field[t.Any], t.Any]) -> None:
+        """
+        Will update the provided fields with the provided values for all 
+        selected fields.
+        """
+
+        where = self._build_where()
+        query = \
+        f"""
+        UPDATE {self.model._cls_tablename()}
+        SET {" = ?, ".join(field.get_name() for field in fields.keys())} = ?
+        {"WHERE " + where if where else ""};
+        """
+
+        change_db(query, tuple(fields.values()))

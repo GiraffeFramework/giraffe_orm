@@ -38,6 +38,8 @@ giraffe_3 = Giraffe.query.load_fields(Giraffe.primary_key).latest("date")
 if giraffe_3:
     print(giraffe_3.primary_key.capitalize())
 
+Giraffe.query.update({Giraffe.number: Giraffe.number + 1})
+
 giraffes = Giraffe.query.with_fields(Giraffe.primary_key).offset(1).limit(1).all()
 print(giraffes)
 

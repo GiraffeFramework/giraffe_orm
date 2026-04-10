@@ -36,10 +36,15 @@ class Model:
 
 
     def __init__(self, **kwargs: dict[str, t.Any]) -> None:
-        self._original_data = kwargs
+        self._data = {}
+        self._original_data = {}
         
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        for field in self._fields:
+            val = kwargs.get(field.name, getattr(field, 'default', None))
+            
+            setattr(self, field.name, val)
+            self._data[field.name] = val
+            self._original_data[field.name] = val
 
 
     def __init_subclass__(cls: t.Type[T], is_abstract: bool = False, **kwargs: dict[str, t.Any]):
@@ -126,7 +131,7 @@ class Model:
         old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls._cls_tablename()})")
         schema_keys: list[str] = []
 
-        print('\told_schemas: ', old_schemas)
+        print("\told_schemas: ", old_schemas)
         
         # If not previous schema exists, we may just return the current schema
         if not old_schemas: return cls._get_schema()
@@ -163,26 +168,26 @@ class Model:
         # Otherwise it is added as a completely new schema
         schema: RawFieldSchema | None = None
 
-        for key, value in cls.__dict__.items():
-            if not isinstance(value, Field): continue
-            if key in schema_keys: continue
+        for value in cls._fields:
+            # if not isinstance(value, Field): continue
+            if value.name in schema_keys: continue
 
             for raw_field, old_schema in __dropped_fields.items():
                 if value._get_schema_changes(old_schema): continue
-                schema = _get_rename_field_schema(key, old_schema[1])
+                schema = _get_rename_field_schema(value.name, old_schema[1])
 
                 altered_fields.remove(raw_field)
                 altered_fields.append(schema)
                 continue
 
             schema = value._get_schema()
-            schema["mode"] = 'add'
+            schema["mode"] = "add"
 
             altered_fields.append(schema)
 
 
         if not altered_fields: return None
-        print('\tschemas: ', altered_fields)
+        print("\tschemas: ", altered_fields)
 
 
         return {
@@ -224,6 +229,19 @@ class Model:
         field_values = dict(zip(field_names, row))
 
         return cls(**field_values)
+    
+
+    def _get_pk(self) -> tuple[str, t.Any]:
+        """
+        Returns the name of the PRIMARY KEY column and the pk value for this 
+        instance.
+        """
+        primary_key = type(self)._primary_key
+
+        return (
+            primary_key.get_name(), 
+            self._original_data.get(primary_key.name)
+        )
 
 
     def save(self) -> None:

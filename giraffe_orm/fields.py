@@ -27,10 +27,9 @@ class Field(t.Generic[T]):
             primary_key: bool = False, 
             unique: bool = False, 
             default: t.Any | None = None,
-            name: str | None = None
         ) -> None:
         
-        self.name: str = name if name else "unset"
+        self.name = "UNSET"
         self.type = type
         self.nullable = nullable
         self.primary_key = primary_key
@@ -107,9 +106,12 @@ class Field(t.Generic[T]):
     def __set__(self, instance: 'Model', value: str) -> None:
         instance._data[self.name] = value
 
+    def __add__(self, value: T) -> str:
+        return f"{self.get_name()} + {value}"
+
 
 class String(Field[str]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: str | None = None, name: str | None = None, max_length: int | None = 255, min_length: int | None = 0) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: str | None = None, max_length: int | None = 255, min_length: int | None = 0) -> None:
         super().__init__("VARCHAR", nullable, primary_key, unique)
 
         if max_length is not None and _is_valid(max_length, int, "max_length"):
@@ -127,7 +129,7 @@ class String(Field[str]):
 
 
 class Integer(Field[int]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: int | None = None, name: str | None = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: int | None = None) -> None:
         super().__init__('INTEGER', nullable, primary_key, unique)
 
         if default is not None and _is_valid(default, int, "default"):
@@ -135,7 +137,7 @@ class Integer(Field[int]):
 
 
 class Float(Field[float]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: float | None = None, name: str | None = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: float | None = None) -> None:
         super().__init__('FLOAT', nullable, primary_key, unique)
 
         if default is not None and _is_valid(default, float, "default"):
@@ -143,7 +145,7 @@ class Float(Field[float]):
 
 
 class Date(Field[datetime]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None, name: str | None = None) -> None:
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None) -> None:
         if not default:
             default = "CURRENT_TIMESTAMP"
         
