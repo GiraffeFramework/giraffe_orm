@@ -1,5 +1,5 @@
 from giraffe_orm.connections import query_one, change_db, query_all
-from giraffe_orm.fields import Field, Date, datetime
+from giraffe_orm.fields import Field, Date, datetime, Clause
 
 from enum import Enum
 
@@ -106,6 +106,13 @@ class Query(t.Generic[MT, RT]):
     
 
     # --- Output modifiers ---
+
+
+    def filter(self) -> t.Self:
+        """
+        Applies the provided filters to the WHERE clause of the query.
+        """
+        return self
 
 
     def limit(self, limit: int = 0) -> t.Self:
@@ -241,18 +248,32 @@ class Query(t.Generic[MT, RT]):
         return self._query_one(query)
 
 
-    def update(self, fields: dict[Field[t.Any], t.Any]) -> None:
+    def update(self, changes: dict[Field[t.Any], t.Any]) -> None:
         """
         Will update the provided fields with the provided values for all 
         selected fields.
         """
 
+        fields: str = ""
+        values: list[t.Any] = []
+
+        for field, value in changes.items():
+            if not isinstance(value, dict):
+                fields += field.get_name() + " = ?, "
+                values.append(value)
+                continue
+
+            value = t.cast(Clause, value)
+
+            fields += f"{field.get_name()} = {value['lhs']} ?, "
+            values.append(value["rhs"])
+
         where = self._build_where()
         query = \
         f"""
         UPDATE {self.model._cls_tablename()}
-        SET {" = ?, ".join(field.get_name() for field in fields.keys())} = ?
+        SET {fields[:-2]}
         {"WHERE " + where if where else ""};
         """
 
-        change_db(query, tuple(fields.values()))
+        change_db(query, tuple(values))

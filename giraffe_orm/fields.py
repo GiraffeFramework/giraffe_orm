@@ -16,6 +16,11 @@ def _is_valid(value: t.Any, expected_type: type, name: str) -> bool:
     return True
 
 
+class Clause(t.TypedDict):
+    lhs: str
+    rhs: t.Any
+
+
 T = t.TypeVar('T')
 
 
@@ -106,8 +111,11 @@ class Field(t.Generic[T]):
     def __set__(self, instance: 'Model', value: str) -> None:
         instance._data[self.name] = value
 
-    def __add__(self, value: T) -> str:
-        return f"{self.get_name()} + {value}"
+    def __add__(self, value: T) -> Clause:
+        return {
+            "lhs": self.get_name() + " +",
+            "rhs": value
+        }
 
 
 class String(Field[str]):
