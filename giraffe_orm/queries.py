@@ -1,5 +1,5 @@
 from giraffe_orm.connections import query_one, change_db, query_all
-from giraffe_orm.fields import Field, Date, datetime, Clause
+from giraffe_orm.fields import Field, Date_, datetime, Clause
 
 from enum import Enum
 
@@ -12,9 +12,17 @@ if t.TYPE_CHECKING:
 
 MT = t.TypeVar("MT", bound='Model')
 RT = t.TypeVar("RT")
-T1 = t.TypeVar("T1")
 
-Ts = t.TypeVarTuple("Ts")
+T1 = t.TypeVar("T1")
+T2 = t.TypeVar("T2")
+T3 = t.TypeVar("T3")
+T4 = t.TypeVar("T4")
+T5 = t.TypeVar("T5")
+T6 = t.TypeVar("T6")
+T7 = t.TypeVar("T7")
+T8 = t.TypeVar("T8")
+T9 = t.TypeVar("T9")
+T10 = t.TypeVar("T10")
 
 
 class QueryMode(Enum):
@@ -32,7 +40,7 @@ class Query(t.Generic[MT, RT]):
         self.__offset = -1
         self.__limit = -1
         self.__selected_fields: tuple[Field[t.Any], ...] | None = None
-        self.__date_field_cache: Date | None = None
+        self.__date_field_cache: Date_ | None = None
 
 
     def _build_select(self) -> str:
@@ -87,7 +95,7 @@ class Query(t.Generic[MT, RT]):
     
     
     # TODO: TEMPORARY FIELD:
-    def create(self, **kwargs: dict[str, t.Any]) -> MT:
+    def create(self, **kwargs: t.Any) -> MT:
         fields = ', '.join(kwargs.keys())
         placeholders = ', '.join('?' for _ in kwargs)
         values = tuple(kwargs.values())
@@ -108,9 +116,9 @@ class Query(t.Generic[MT, RT]):
     # --- Output modifiers ---
 
 
-    def filter(self) -> t.Self:
+    def where(self) -> t.Self:
         """
-        Applies the provided filters to the WHERE clause of the query.
+        Applies the provided conditions to the WHERE clause of the query.
         """
         return self
 
@@ -125,7 +133,7 @@ class Query(t.Generic[MT, RT]):
         return self
 
 
-    def load_fields(self, *fields: Field[t.Any]) -> t.Self:
+    def load(self, *fields: Field[t.Any]) -> t.Self:
         """
         This query will return (an) instance(s) of this Model with only the 
         provided fields loaded from the database.
@@ -145,12 +153,32 @@ class Query(t.Generic[MT, RT]):
         self.__offset = offset
         return self
 
-    
+
+    # fmt: off
     @t.overload
-    def with_fields(self, __f1: Field[T1]) -> "Query[MT, tuple[T1]]": ...
+    def select(self, __f1: Field[T1]) -> "Query[MT, tuple[T1]]": ...
     @t.overload
-    def with_fields(self, *fields: Field[t.Any]) -> "Query[MT, tuple[t.Any, ...]]": ...
-    def with_fields(self, *fields: Field[t.Any]) -> "Query[MT, tuple[t.Any, ...]]":
+    def select(self, __f1: Field[T1], __f2: Field[T2]) -> "Query[MT, tuple[T1, T2]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3]) -> "Query[MT, tuple[T1, T2, T3]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4]) -> "Query[MT, tuple[T1, T2, T3, T4]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5]) -> "Query[MT, tuple[T1, T2, T3, T4, T5]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5], __f6: Field[T6]) -> "Query[MT, tuple[T1, T2, T3, T4, T5, T6]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5], __f6: Field[T6], __f7: Field[T7]) -> "Query[MT, tuple[T1, T2, T3, T4, T5, T6, T7]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5], __f6: Field[T6], __f7: Field[T7], __f8: Field[T8]) -> "Query[MT, tuple[T1, T2, T3, T4, T5, T6, T7, T8]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5], __f6: Field[T6], __f7: Field[T7], __f8: Field[T8], __f9: Field[T9]) -> "Query[MT, tuple[T1, T2, T3, T4, T5, T6, T7, T8, T9]]": ...
+    @t.overload
+    def select(self, __f1: Field[T1], __f2: Field[T2], __f3: Field[T3], __f4: Field[T4], __f5: Field[T5], __f6: Field[T6], __f7: Field[T7], __f8: Field[T8], __f9: Field[T9], __f10: Field[T10]) -> "Query[MT, tuple[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10]]": ...
+    @t.overload
+    def select(self, *fields: Field[t.Any]) -> "Query[MT, tuple[t.Any, ...]]": ...
+    # fmt: on
+    def select(self, *fields: Field[t.Any]) -> "Query[MT, t.Any]":
         """
         This query will return (a) tuple(s) with only the provided fields 
         loaded from the database.
@@ -169,10 +197,13 @@ class Query(t.Generic[MT, RT]):
         Get all elements satisfying the query.
         """
 
+        where = self._build_where()
+
         query = \
         f"""
         SELECT {self._build_select()}
         FROM {self.model._cls_tablename()}
+        {"WHERE " + where if where else ""}
         """
 
         if self.__limit > -1:
@@ -184,15 +215,41 @@ class Query(t.Generic[MT, RT]):
         return self._query_all(query)
 
 
-    def first(self) -> RT | None:
+    def assure(self) -> RT | None:
         """
-        Get the first element (or None) satisfying the query.
+        Retunrs the first element that satisfies the query. Will raise an error
+        if this is None.
         """
+
+        where = self._build_where()
 
         query = \
         f"""
         SELECT {self._build_select()}
         FROM {self.model._cls_tablename()}
+        {"WHERE " + where if where else ""}
+        LIMIT 1;
+        """
+
+        if result := self._query_one(query):
+            return result
+
+        # TODO: custom errors?
+        raise ValueError("Expected not None value, got None")
+
+
+    def first(self) -> RT | None:
+        """
+        Get the first element (or None) satisfying the query.
+        """
+
+        where = self._build_where()
+
+        query = \
+        f"""
+        SELECT {self._build_select()}
+        FROM {self.model._cls_tablename()}
+        {"WHERE " + where if where else ""}
         LIMIT 1;
         """
 
@@ -219,12 +276,12 @@ class Query(t.Generic[MT, RT]):
             self.__date_field_cache = getattr(self.model, date_field, None)
 
         # Internally Field[datetime] does not exist and will always be a Date field
-        elif isinstance(date_field, Date):
+        elif isinstance(date_field, Date_):
             self.__date_field_cache = date_field
 
         elif not self.__date_field_cache:
             try:
-                self.__date_field_cache = next(self.model._fields_of_type(Date))
+                self.__date_field_cache = next(self.model._fields_of_type(Date_))
             
             except StopIteration:
                 raise ValueError("Could not find any date fields.")
@@ -237,10 +294,13 @@ class Query(t.Generic[MT, RT]):
             raise ValueError(f"Date Field '{date_field}' not found on model.")
         
         field_name = self.__date_field_cache.get_name()
+        where = self._build_where()
+
         query = \
         f"""
         SELECT {self._build_select()}
         FROM {self.model._cls_tablename()}
+        {"WHERE " + where if where else ""}
         ORDER BY {field_name} DESC
         LIMIT 1;
         """

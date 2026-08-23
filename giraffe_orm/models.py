@@ -1,5 +1,4 @@
 from giraffe_orm.connections import query_all, change_db
-from giraffe_orm.queries import Query
 from giraffe_orm.schemas import table_pragma, Schema, RawFieldSchema, RenameFieldSchema, FieldSchema
 from giraffe_orm.fields import Field
 
@@ -22,9 +21,7 @@ def _get_rename_field_schema(name: str, old_name: str) -> RenameFieldSchema:
 
 
 class Model:
-    query: Query[Self, Self]
-
-
+    
     _data: dict[str, t.Any] = {}
     _original_data: dict[str, t.Any] = {}
     
@@ -49,7 +46,6 @@ class Model:
 
     def __init_subclass__(cls: t.Type[T], is_abstract: bool = False, **kwargs: dict[str, t.Any]):
         super().__init_subclass__(**kwargs)
-        cls.query = Query(cls)
 
         # Initialize class specific storage
         cls._fields = []

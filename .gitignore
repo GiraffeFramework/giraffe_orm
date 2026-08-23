@@ -18,6 +18,3 @@ build/
 # Databases
 migrations/
 *.sqlite3
-
-#TODO: TEMPORARILY:
-tests/

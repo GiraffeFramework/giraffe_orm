@@ -118,7 +118,7 @@ class Field(t.Generic[T]):
         }
 
 
-class String(Field[str]):
+class String_(Field[str]):
     def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: str | None = None, max_length: int | None = 255, min_length: int | None = 0) -> None:
         super().__init__("VARCHAR", nullable, primary_key, unique)
 
@@ -136,7 +136,7 @@ class String(Field[str]):
             self.default = default
 
 
-class Integer(Field[int]):
+class Integer_(Field[int]):
     def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: int | None = None) -> None:
         super().__init__('INTEGER', nullable, primary_key, unique)
 
@@ -144,7 +144,7 @@ class Integer(Field[int]):
             self.default = default
 
 
-class Float(Field[float]):
+class Float_(Field[float]):
     def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: float | None = None) -> None:
         super().__init__('FLOAT', nullable, primary_key, unique)
 
@@ -152,9 +152,8 @@ class Float(Field[float]):
             self.default = default
 
 
-class Date(Field[datetime]):
-    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None) -> None:
-        if not default:
-            default = "CURRENT_TIMESTAMP"
-        
+class Date_(Field[datetime]):
+    def __init__(self, nullable: bool = True, primary_key: bool = False, unique: bool = False, default: t.Any | None = None) -> None:        
         super().__init__('DATE', nullable, primary_key, unique, default)
+
+        self.default = default

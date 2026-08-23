@@ -1,29 +1,28 @@
 
+from giraffe_orm.versioning.migration import Migration
 from giraffe_orm.connections import execute_script
-from giraffe_orm.defaults import Migration
 from giraffe_orm.schemas import Schema, FieldSchema, RawFieldSchema, RenameFieldSchema
 
 from pathlib import Path
 
 import typing_extensions as te
-import argparse
+import typing as t
 import json
+
+
+if t.TYPE_CHECKING:
+    from giraffe_orm import GiraffeORM
 
 
 MIGRATIONS_DIR = Path.cwd() / "migrations"
 
 
-def add_arguments(parser: argparse.ArgumentParser):
-    parser.add_argument("migration_name", help="The migration name to apply.")
-
-    return
-
-
-def execute(args: argparse.Namespace):
-    migration = MIGRATIONS_DIR / f"{args.migration_name}.json"
+def upgrade(db: "GiraffeORM", version: int):
+    migration_name = f"{version}.json"
+    migration = MIGRATIONS_DIR / f"{migration_name}"
 
     if not migration:
-        print(f"Migration {args.migration_name} not found.")
+        print(f"Migration {migration_name} not found.")
         return
 
 
@@ -40,10 +39,10 @@ def execute(args: argparse.Namespace):
 
     execute_script(migration_steps)
 
-    migration = Migration.query.create(name=args.migration_name)
+    migration = db(Migration).create(version=version)
 
 
-    print(f"Migration {args.migration_name} applied successfully.")
+    print(f"Migration {migration_name} applied successfully.")
 
 
 def _get_migration_steps(migration: list[Schema]) -> str:
