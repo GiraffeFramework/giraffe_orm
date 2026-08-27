@@ -1,9 +1,9 @@
-from pathlib import Path
-
-from giraffe_orm.versioning.migration import Migration
+from giraffe_orm.versioning.models import Migration
 from giraffe_orm.connections import execute_script
 from giraffe_orm.schemas import Schema
-from giraffe_orm.models import Model
+from giraffe_orm.model import Model
+
+from pathlib import Path
 
 import typing as t
 import json

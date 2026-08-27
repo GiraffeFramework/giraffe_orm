@@ -14,7 +14,3 @@ build/
 .vscode/
 
 *.code-workspace
-
-# Databases
-migrations/
-*.sqlite3

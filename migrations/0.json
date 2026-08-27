@@ -1,0 +1,78 @@
+[
+    {
+        "tablename": "terminal_methods",
+        "create": [
+            {
+                "name": "primary_key",
+                "mode": "UNSET",
+                "type": "INTEGER",
+                "notnull": false,
+                "dflt_value": null,
+                "pk": true
+            },
+            {
+                "name": "date_1",
+                "mode": "UNSET",
+                "type": "DATE",
+                "notnull": true,
+                "dflt_value": null,
+                "pk": false
+            },
+            {
+                "name": "date_2",
+                "mode": "UNSET",
+                "type": "DATE",
+                "notnull": true,
+                "dflt_value": null,
+                "pk": false
+            }
+        ],
+        "alter": []
+    },
+    {
+        "tablename": "select_methods",
+        "create": [
+            {
+                "name": "primary_key",
+                "mode": "UNSET",
+                "type": "INTEGER",
+                "notnull": false,
+                "dflt_value": null,
+                "pk": true
+            },
+            {
+                "name": "integer",
+                "mode": "UNSET",
+                "type": "INTEGER",
+                "notnull": true,
+                "dflt_value": 0,
+                "pk": false
+            },
+            {
+                "name": "string",
+                "mode": "UNSET",
+                "type": "VARCHAR(255)",
+                "notnull": true,
+                "dflt_value": "test",
+                "pk": false
+            },
+            {
+                "name": "date",
+                "mode": "UNSET",
+                "type": "DATE",
+                "notnull": true,
+                "dflt_value": null,
+                "pk": false
+            },
+            {
+                "name": "float",
+                "mode": "UNSET",
+                "type": "FLOAT",
+                "notnull": true,
+                "dflt_value": 0,
+                "pk": false
+            }
+        ],
+        "alter": []
+    }
+]

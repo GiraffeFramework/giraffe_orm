@@ -32,16 +32,27 @@ class Model:
     _registry: list[t.Type['Model']] = []
 
 
-    def __init__(self, **kwargs: dict[str, t.Any]) -> None:
+    def __init__(self, **kwargs: t.Any) -> None:
+        """
+        Create instance from field to value mapping. Will store the original 
+        data for smarter model saving. Absent fields will be filled with the
+        default value.
+        """
+
         self._data = {}
         self._original_data = {}
-        
+
         for field in self._fields:
-            val = kwargs.get(field.name, getattr(field, 'default', None))
+
+            if field.name in kwargs:
+                value = kwargs[field.name]
+            else:
+                value = field.get_default()
+
+            setattr(self, field.name, value)
             
-            setattr(self, field.name, val)
-            self._data[field.name] = val
-            self._original_data[field.name] = val
+            self._data[field.name] = value
+            self._original_data[field.name] = value
 
 
     def __init_subclass__(cls: t.Type[T], is_abstract: bool = False, **kwargs: dict[str, t.Any]):
@@ -56,19 +67,20 @@ class Model:
             Model._registry.append(cls)
 
         # Loop over all key, values of this Model instance (ignore all that 
-        # arent Fields). Store all Fields and the primary_key
-        for name, value in cls.__dict__.items():
-            if not isinstance(value, Field): continue
+        # arent Fields). Store all Fields and the primary_key. Update field 
+        # names
+        for name, field in cls.__dict__.items():
+            if not isinstance(field, Field): continue
             if not name.isidentifier(): raise ValueError(f"Invalid field name {name}")
             
-            value.name = name
-            cls._fields.append(value)   # type: ignore
+            field.name = name
+            cls._fields.append(field)   # type: ignore
 
-            if not value.primary_key: continue
+            if not field.primary_key: continue
             if found_pk != None:
                 raise TypeError(f"You cannot have multiple primary keys")
             
-            found_pk = value     # type: ignore
+            found_pk = field     # type: ignore
 
         if not found_pk: raise ValueError("No primary key defined for Model")
         cls._primary_key = found_pk     # type: ignore
@@ -85,7 +97,7 @@ class Model:
         return name
     
     @classmethod
-    def _cls_tablename(cls) -> str:
+    def _get_tablename(cls) -> str:
         if cls._tablename:
             return cls._tablename
         
@@ -124,7 +136,7 @@ class Model:
         
         __dropped_fields: dict[RawFieldSchema, table_pragma] = {}
         altered_fields: list[RawFieldSchema] = []
-        old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls._cls_tablename()})")
+        old_schemas: list[table_pragma] = query_all(f"PRAGMA table_info({cls._get_tablename()})")
         schema_keys: list[str] = []
 
         print("\told_schemas: ", old_schemas)
@@ -187,7 +199,7 @@ class Model:
 
 
         return {
-            "tablename": cls._cls_tablename(),
+            "tablename": cls._get_tablename(),
             "create": [],
             "alter": altered_fields
         }
@@ -213,7 +225,7 @@ class Model:
         if not primary_key: raise ValueError("Model must have a primary key")
 
         return {
-            "tablename": cls()._cls_tablename(),
+            "tablename": cls()._get_tablename(),
             "create": fields,
             "alter": []
         }
@@ -240,6 +252,14 @@ class Model:
         )
 
 
+    def get(self, field: str) -> t.Any | None:
+        return self._data.get(field)
+
+
+    def set(self, field: str, value: t.Any) -> None:
+        self._data[field] = value
+    
+
     def save(self) -> None:
         changed_fields: list[str] = []
         changed_values: list[t.Any] = []
@@ -258,7 +278,7 @@ class Model:
         pk_name = type(self)._primary_key.get_name()
         query = \
         f"""
-        UPDATE {self._cls_tablename()} 
+        UPDATE {self._get_tablename()} 
         SET {" = ?, ".join(changed_fields)} = ? 
         WHERE {pk_name} = ?
         """

@@ -5,7 +5,7 @@ conn = sqlite3.connect('db.sqlite3')
 cursor = conn.cursor()
 
 
-def change_db(query: str, parameters: tuple[t.Any, ...]) -> int:
+def change_db(query: str, parameters: tuple[t.Any, ...] = ()) -> int:
     print('\tchange_query: ', query)
 
     cursor.execute(query, parameters)

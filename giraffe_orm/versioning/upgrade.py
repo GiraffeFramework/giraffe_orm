@@ -1,5 +1,5 @@
 
-from giraffe_orm.versioning.migration import Migration
+from giraffe_orm.versioning.models import Migration
 from giraffe_orm.connections import execute_script
 from giraffe_orm.schemas import Schema, FieldSchema, RawFieldSchema, RenameFieldSchema
 

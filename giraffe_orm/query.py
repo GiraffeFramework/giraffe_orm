@@ -1,13 +1,14 @@
 from giraffe_orm.connections import query_one, change_db, query_all
-from giraffe_orm.fields import Field, Date_, datetime, Clause
+from giraffe_orm.fields import Field, DateField, Clause
 
+from datetime import datetime, date
 from enum import Enum
 
 import typing as t
 
 
 if t.TYPE_CHECKING:
-    from giraffe_orm.models import Model
+    from giraffe_orm.model import Model
 
 
 MT = t.TypeVar("MT", bound='Model')
@@ -40,7 +41,8 @@ class Query(t.Generic[MT, RT]):
         self.__offset = -1
         self.__limit = -1
         self.__selected_fields: tuple[Field[t.Any], ...] | None = None
-        self.__date_field_cache: Date_ | None = None
+        # TODO: DateTime or Date??
+        self.__date_field_cache: DateField | None = None
 
 
     def _build_select(self) -> str:
@@ -94,22 +96,33 @@ class Query(t.Generic[MT, RT]):
         return t.cast(list[RT], results) 
     
     
-    # TODO: TEMPORARY FIELD:
+    # TODO: TEMPORARY METHOD:
     def create(self, **kwargs: t.Any) -> MT:
+        for field in self.model._fields:
+            if field.name in kwargs: continue
+
+            dflt = field.get_default()
+            if dflt == None: continue
+
+            kwargs[field.name] = dflt
+
         fields = ', '.join(kwargs.keys())
         placeholders = ', '.join('?' for _ in kwargs)
         values = tuple(kwargs.values())
 
-        last_id = change_db(
-            f"INSERT INTO {self.model._cls_tablename()} ({fields}) VALUES ({placeholders})",
-            values
-        )
+        if values:
+            last_id = change_db(
+                f"INSERT INTO {self.model._get_tablename()} ({fields}) VALUES ({placeholders});",
+                values
+            )
+        else:
+            last_id = change_db(f"INSERT INTO {self.model._get_tablename()};")
 
         if not last_id:
             raise ValueError("Failed to create new entry")
 
-        print("\tTODO: fix", last_id)
-        row = query_one(f"SELECT * FROM {self.model._cls_tablename()} WHERE rowid = ?", (last_id,))
+        # TODO, common practice?
+        row = query_one(f"SELECT * FROM {self.model._get_tablename()} WHERE rowid = ?;", (last_id,))
         return self.model._from_db(row)
     
 
@@ -202,7 +215,7 @@ class Query(t.Generic[MT, RT]):
         query = \
         f"""
         SELECT {self._build_select()}
-        FROM {self.model._cls_tablename()}
+        FROM {self.model._get_tablename()}
         {"WHERE " + where if where else ""}
         """
 
@@ -226,7 +239,7 @@ class Query(t.Generic[MT, RT]):
         query = \
         f"""
         SELECT {self._build_select()}
-        FROM {self.model._cls_tablename()}
+        FROM {self.model._get_tablename()}
         {"WHERE " + where if where else ""}
         LIMIT 1;
         """
@@ -234,7 +247,6 @@ class Query(t.Generic[MT, RT]):
         if result := self._query_one(query):
             return result
 
-        # TODO: custom errors?
         raise ValueError("Expected not None value, got None")
 
 
@@ -248,7 +260,7 @@ class Query(t.Generic[MT, RT]):
         query = \
         f"""
         SELECT {self._build_select()}
-        FROM {self.model._cls_tablename()}
+        FROM {self.model._get_tablename()}
         {"WHERE " + where if where else ""}
         LIMIT 1;
         """
@@ -261,7 +273,9 @@ class Query(t.Generic[MT, RT]):
     def latest(self, date_field: str) -> RT | None: ...
     @t.overload
     def latest(self, date_field: Field[datetime]) -> RT | None: ...
-    def latest(self, date_field: str | Field[datetime] | None = None) -> RT | None:
+    @t.overload
+    def latest(self, date_field: Field[date]) -> RT | None: ...
+    def latest(self, date_field: str | Field[datetime] | Field[date] | None = None) -> RT | None:
         """
         Get last table row based on Date fields. If no explicit field provided
         the first field of type Date will be used. Takes in a Field[datetime] 
@@ -275,13 +289,16 @@ class Query(t.Generic[MT, RT]):
         if isinstance(date_field, str):
             self.__date_field_cache = getattr(self.model, date_field, None)
 
+        # TODO:
+        # Properly distinguish between datetime and date fields
+
         # Internally Field[datetime] does not exist and will always be a Date field
-        elif isinstance(date_field, Date_):
+        elif isinstance(date_field, DateField):
             self.__date_field_cache = date_field
 
         elif not self.__date_field_cache:
             try:
-                self.__date_field_cache = next(self.model._fields_of_type(Date_))
+                self.__date_field_cache = next(self.model._fields_of_type(DateField))
             
             except StopIteration:
                 raise ValueError("Could not find any date fields.")
@@ -299,7 +316,7 @@ class Query(t.Generic[MT, RT]):
         query = \
         f"""
         SELECT {self._build_select()}
-        FROM {self.model._cls_tablename()}
+        FROM {self.model._get_tablename()}
         {"WHERE " + where if where else ""}
         ORDER BY {field_name} DESC
         LIMIT 1;
@@ -331,7 +348,7 @@ class Query(t.Generic[MT, RT]):
         where = self._build_where()
         query = \
         f"""
-        UPDATE {self.model._cls_tablename()}
+        UPDATE {self.model._get_tablename()}
         SET {fields[:-2]}
         {"WHERE " + where if where else ""};
         """
